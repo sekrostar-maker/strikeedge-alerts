@@ -1,0 +1,20 @@
+# fly.toml — Football Lineup Alert Bot
+# Background worker: no HTTP port, just a persistent Python process.
+
+app            = "football-lineup-alerts"
+primary_region = "ams"               # Amsterdam — change to nearest region if preferred
+                                     # Other options: lhr (London), cdg (Paris), fra (Frankfurt)
+                                     # Full list: https://fly.io/docs/reference/regions/
+
+[build]
+  # Uses the Dockerfile in this directory
+
+[env]
+  DB_PATH = "/data/football_alerts.db"   # persistent volume path
+
+[[mounts]]
+  source      = "football_data"          # volume name (created via `fly volumes create`)
+  destination = "/data"
+
+[deploy]
+  strategy = "immediate"                 # fastest redeploy (no rolling update needed)
