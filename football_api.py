@@ -132,3 +132,46 @@ class FootballAPI:
         except:
             pass
         return None
+
+    def get_player_advanced_stats(self, player_name, team_name):
+        """Stats avancées: duels aériens %, dribbles %, penalties, passes décisives"""
+        try:
+            resp = self.session.get(f"{BASE_URL}/players", params={"search": player_name, "season": "2026"}, timeout=10)
+            if resp.status_code == 200:
+                for p in resp.json().get("response", []):
+                    for s in p.get("statistics", []):
+                        if s.get("team", {}).get("name") == team_name:
+                            duels = s.get("duels", {})
+                            dribbles = s.get("dribbles", {})
+                            passes = s.get("passes", {})
+                            return {
+                                "duels_aeriens_gagnes": duels.get("won", 0) or 0,
+                                "duels_aeriens_total": duels.get("total", 0) or 0,
+                                "dribbles_reussis": dribbles.get("success", 0) or 0,
+                                "dribbles_tentatives": dribbles.get("attempts", 0) or 0,
+                                "passes_decisives": passes.get("assists", 0) or 0,
+                                "penalties_marques": s.get("penalty", {}).get("scored", 0) or 0,
+                                "penalties_tentes": s.get("penalty", {}).get("total", 0) or 0,
+                            }
+        except:
+            pass
+        return None
+
+    def get_team_xg(self, team_name, league_id):
+        """xG pour et contre d'une équipe"""
+        try:
+            resp = self.session.get(f"{BASE_URL}/teams", params={"search": team_name}, timeout=10)
+            if resp.status_code == 200:
+                for t in resp.json().get("response", []):
+                    if t["team"]["name"] == team_name:
+                        tid = t["team"]["id"]
+                        r2 = self.session.get(f"{BASE_URL}/teams/statistics", params={"team": tid, "league": league_id, "season": "2026"}, timeout=10)
+                        if r2.status_code == 200:
+                            d = r2.json().get("response", {})
+                            return {
+                                "xg_pour": d.get("xg", {}).get("for", {}).get("total", 0) or 0,
+                                "xg_contre": d.get("xg", {}).get("against", {}).get("total", 0) or 0,
+                            }
+        except:
+            pass
+        return None
