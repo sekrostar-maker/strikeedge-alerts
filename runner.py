@@ -62,6 +62,8 @@ def main():
             try:
                 kickoff = datetime.fromisoformat(match["utcDate"].replace("Z", "+00:00"))
                 minutes = (kickoff - now).total_seconds() / 60
+            except:
+                continue
             
             # Analyse sans lineups (stats equipes)
             try:
