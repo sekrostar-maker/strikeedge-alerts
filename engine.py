@@ -1,4 +1,3 @@
-"""Moteur d'analyse - Probabilités et résumés parlants"""
 from brain import Brain
 from football_api import FootballAPI
 
@@ -8,64 +7,71 @@ class AnalysisEngine:
         self.api = FootballAPI()
     
     def analyse_match(self, match):
-        """Analyse un match et retourne les recommandations buteurs"""
         mid = match['id']
         home = match['homeTeam']['name']
         away = match['awayTeam']['name']
         championnat = match.get('competition', {}).get('name', '?')
+        league_id = match.get('league_id', '119')
         
         lineups = self.api.get_lineups(mid)
         if not lineups:
             return []
         
-        alertes = []
+        def_home = self.api.get_team_stats(home, league_id) or {}
+        def_away = self.api.get_team_stats(away, league_id) or {}
+        abs_home = self.api.get_absences(home)
+        abs_away = self.api.get_absences(away)
         
-        for side, att_team, def_team in [('home', home, away), ('away', away, home)]:
+        alertes = []
+        for side, att_team, def_team, def_stats, absences in [
+            ('home', home, away, def_away, abs_away),
+            ('away', away, home, def_home, abs_home)
+        ]:
             for p in lineups[side]['players'][:11]:
                 nom = p['player']['name']
-                # Chercher les stats du joueur
                 stats = self.api.get_player_stats(nom, att_team)
                 if not stats:
                     continue
-                
                 buts = stats.get('buts', 0)
                 matchs = stats.get('matchs', 1) or 1
-                
-                # Score de base : buts par match
                 score = (buts / matchs) * 100 if matchs > 0 else 0
                 raisons = []
 
-                # Bonus: forme récente
+                # Forme récente
                 forme = self.brain.get_player_form(nom)
                 if forme and forme['matchs'] >= 3 and forme['buts'] >= 2:
                     score += 15
                     raisons.append(f"{forme['buts']} buts lors des {forme['matchs']} derniers matchs")
                 
-                # Bonus: H2H contre cette équipe
+                # H2H joueur
                 h2h = self.brain.get_h2h(nom, def_team)
                 if h2h and h2h['matchs_joues'] >= 2 and h2h['buts_marques'] >= 2:
                     score += 20
-                    raisons.append(f"A marque {h2h['buts_marques']} buts lors de ses {h2h['matchs_joues']} derniers matchs contre {def_team}")
+                    raisons.append(f"a marque {h2h['buts_marques']} buts contre {def_team}")
                 
-                # Bonus: tirs cadrés
-                tirs_cadres = stats.get('tirs_cadres', 0)
-                if matchs > 0 and tirs_cadres / matchs > 1:
+                # Tirs cadrés
+                tc = stats.get('tirs_cadres', 0)
+                if matchs > 0 and tc / matchs > 1:
                     score += 10
-                    raisons.append(f"{round(tirs_cadres/matchs,1)} tirs cadrés par match en moyenne")
+                    raisons.append(f"{round(tc/matchs,1)} tirs cadres par match")
                 
-                # Bonus: dribbles
-                dribbles = stats.get('dribbles', 0)
-                if matchs > 0 and dribbles / matchs > 1.5:
-                    score += 5
-                    raisons.append("Joueur percutant par ses dribbles")
+                # Défense fébrile
+                be = def_stats.get('buts_encaisses', 0)
+                md = def_stats.get('matchs', 1) or 1
+                if md > 0 and be / md > 1.5:
+                    score += 10
+                    raisons.append(f"{def_team} encaisse {round(be/md,1)} buts par match")
+                
+                # Absences
+                if absences:
+                    score += 10
+                    raisons.append(f"{def_team} prive de {', '.join(absences[:2])}")
 
-                # Générer le résumé parlant
+                # Résumé
                 pourquoi = ""
                 if raisons:
-                    pourquoi = f"{nom} ({att_team}) a de bonnes chances contre {def_team}. "
-                    pourquoi += " ".join(raisons) + "."
+                    pourquoi = f"{nom} ({att_team}) a de bonnes chances contre {def_team}. " + " ".join(raisons) + "."
                 
-                # Ajouter l'alerte si probabilité > 40%
                 score = min(90, score)
                 if score >= 40 and pourquoi:
                     alertes.append({

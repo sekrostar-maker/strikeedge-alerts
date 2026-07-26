@@ -57,3 +57,53 @@ class FootballAPI:
 
     def get_competition_name(self, match):
         return match.get("competition", {}).get("name", "?")
+
+    def get_team_stats(self, team_name, league_id):
+        """Stats complètes d'une équipe dans un championnat"""
+        try:
+            resp = self.session.get(f"{BASE_URL}/teams", params={"search": team_name}, timeout=10)
+            if resp.status_code == 200:
+                for t in resp.json().get("response", []):
+                    if t["team"]["name"] == team_name:
+                        tid = t["team"]["id"]
+                        r2 = self.session.get(f"{BASE_URL}/teams/statistics", params={"team": tid, "league": league_id, "season": "2026"}, timeout=10)
+                        if r2.status_code == 200:
+                            d = r2.json().get("response", {})
+                            return {
+                                "matchs": d.get("fixtures", {}).get("played", {}).get("total", 0) or 0,
+                                "buts_marques": d.get("goals", {}).get("for", {}).get("total", {}).get("total", 0) or 0,
+                                "buts_encaisses": d.get("goals", {}).get("against", {}).get("total", {}).get("total", 0) or 0,
+                                "clean_sheets": d.get("clean_sheet", {}).get("total", 0) or 0,
+                            }
+        except:
+            pass
+        return None
+
+    def get_h2h_teams(self, team1, team2):
+        """Historique des confrontations entre 2 équipes"""
+        try:
+            resp = self.session.get(f"{BASE_URL}/fixtures/headtohead", params={"h2h": f"{team1}-{team2}"}, timeout=10)
+            if resp.status_code == 200:
+                matches = resp.json().get("response", [])
+                h2h = {"total": len(matches), "buts_team1": 0, "buts_team2": 0}
+                for m in matches:
+                    h2h["buts_team1"] += m["goals"]["home"] if m["teams"]["home"]["name"] == team1 else m["goals"]["away"]
+                    h2h["buts_team2"] += m["goals"]["away"] if m["teams"]["home"]["name"] == team1 else m["goals"]["home"]
+                return h2h
+        except:
+            pass
+        return None
+
+    def get_absences(self, team_name):
+        """Blessés et suspendus"""
+        try:
+            resp = self.session.get(f"{BASE_URL}/players/seasons", params={"team": team_name}, timeout=10)
+            if resp.status_code == 200:
+                absences = []
+                for p in resp.json().get("response", []):
+                    if p.get("player", {}).get("injured"):
+                        absences.append(p["player"]["name"])
+                return absences[:5]
+        except:
+            pass
+        return []
