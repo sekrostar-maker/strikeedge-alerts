@@ -79,7 +79,7 @@ def main():
                         log.error("    Erreur analyse: %s", e)
                     
                     fixture = {"home_team": home, "away_team": away, "league_name": api.get_competition_name(match), "kickoff_utc": match["utcDate"], "minutes_to_kickoff": int(minutes)}
-                    bot.send_lineup_notification(fixture, match_data)
+                    pass  # replaced by engine alerts
                     notified.add(mid)
                     sent += 1
         
