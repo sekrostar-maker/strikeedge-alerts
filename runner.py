@@ -13,7 +13,6 @@ from pathlib import Path
 
 from config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, FOOTBALL_DATA_API_KEY
 from football_api import FootballAPI
-from telegram_bot import TelegramBot
 from engine import AnalysisEngine
 from alert_sender import envoyer_alertes
 
@@ -38,7 +37,6 @@ def save_notified(notified_ids):
 
 def main():
     api = FootballAPI()
-    bot = TelegramBot()
     engine = AnalysisEngine()
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     notified = load_notified()
