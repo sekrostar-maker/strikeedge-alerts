@@ -62,6 +62,15 @@ def main():
             try:
                 kickoff = datetime.fromisoformat(match["utcDate"].replace("Z", "+00:00"))
                 minutes = (kickoff - now).total_seconds() / 60
+            
+            # Analyse sans lineups (stats equipes)
+            try:
+                alertes_sans = engine.analyse_match_sans_lineups(match)
+                if alertes_sans:
+                    envoyer_alertes({'domicile':home,'exterieur':away,'heure':match.get('utcDate','?'),'championnat':api.get_competition_name(match)}, alertes_sans)
+                    log.info('    ALERTE EQUIPE envoyee')
+            except Exception as e:
+                pass
             except:
                 continue
             
