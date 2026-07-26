@@ -14,6 +14,8 @@ from pathlib import Path
 from config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, FOOTBALL_DATA_API_KEY
 from football_api import FootballAPI
 from telegram_bot import TelegramBot
+from engine import AnalysisEngine
+from alert_sender import envoyer_alertes
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s", datefmt="%Y-%m-%d %H:%M:%S", handlers=[logging.StreamHandler(sys.stdout)])
 log = logging.getLogger(__name__)
@@ -37,6 +39,7 @@ def save_notified(notified_ids):
 def main():
     api = FootballAPI()
     bot = TelegramBot()
+    engine = AnalysisEngine()
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     notified = load_notified()
     sent = 0
@@ -66,6 +69,15 @@ def main():
                 log.info("  %s vs %s (%.0f min)", home, away, minutes)
                 match_data = api.get_lineups(mid)
                 if match_data:
+                    # Analyse des mismatches
+                    try:
+                        alertes = engine.analyse_match(match)
+                        if alertes:
+                            envoyer_alertes({'domicile':home,'exterieur':away,'heure':match.get('utcDate','?'),'championnat':api.get_competition_name(match)}, alertes)
+                            log.info("    ALERTE ENVOYEE: %d recommandations", len(alertes))
+                    except Exception as e:
+                        log.error("    Erreur analyse: %s", e)
+                    
                     fixture = {"home_team": home, "away_team": away, "league_name": api.get_competition_name(match), "kickoff_utc": match["utcDate"], "minutes_to_kickoff": int(minutes)}
                     bot.send_lineup_notification(fixture, match_data)
                     notified.add(mid)
