@@ -107,3 +107,28 @@ class FootballAPI:
         except:
             pass
         return []
+
+    def get_player_detailed_stats(self, player_name, team_name):
+        """Stats détaillées: buts par type, fautes subies, cartons, passes"""
+        try:
+            resp = self.session.get(f"{BASE_URL}/players", params={"search": player_name, "season": "2026"}, timeout=10)
+            if resp.status_code == 200:
+                for p in resp.json().get("response", []):
+                    for s in p.get("statistics", []):
+                        if s.get("team", {}).get("name") == team_name:
+                            return {
+                                "buts_total": s.get("goals", {}).get("total", 0) or 0,
+                                "buts_tete": s.get("goals", {}).get("head", 0) or 0,
+                                "buts_pied": s.get("goals", {}).get("left", 0) or 0 + (s.get("goals", {}).get("right", 0) or 0),
+                                "buts_penalty": s.get("goals", {}).get("penalty", 0) or 0,
+                                "passes_cles": s.get("passes", {}).get("key", 0) or 0,
+                                "fautes_subies": s.get("fouls", {}).get("drawn", 0) or 0,
+                                "cartons_jaunes": s.get("cards", {}).get("yellow", 0) or 0,
+                                "cartons_rouges": s.get("cards", {}).get("red", 0) or 0,
+                                "matchs": s.get("games", {}).get("appearences", 0) or 0,
+                                "minutes": s.get("games", {}).get("minutes", 0) or 0,
+                                "xg": s.get("xg", {}).get("total", 0) or 0,
+                            }
+        except:
+            pass
+        return None

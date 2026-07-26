@@ -29,10 +29,11 @@ class AnalysisEngine:
         ]:
             for p in lineups[side]['players'][:11]:
                 nom = p['player']['name']
-                stats = self.api.get_player_stats(nom, att_team)
+                stats = self.api.get_player_detailed_stats(nom, att_team)
                 if not stats:
                     continue
-                buts = stats.get('buts', 0)
+                
+                buts = stats.get('buts_total', 0)
                 matchs = stats.get('matchs', 1) or 1
                 score = (buts / matchs) * 100 if matchs > 0 else 0
                 raisons = []
@@ -49,11 +50,23 @@ class AnalysisEngine:
                     score += 20
                     raisons.append(f"a marque {h2h['buts_marques']} buts contre {def_team}")
                 
-                # Tirs cadrés
-                tc = stats.get('tirs_cadres', 0)
-                if matchs > 0 and tc / matchs > 1:
+                # Buts de la tête
+                buts_tete = stats.get('buts_tete', 0)
+                if matchs > 0 and buts_tete / buts > 0.3 and buts > 0:
                     score += 10
-                    raisons.append(f"{round(tc/matchs,1)} tirs cadres par match")
+                    raisons.append(f"{round(buts_tete/buts*100)}% de ses buts sont de la tete")
+                
+                # Fautes subies
+                fautes = stats.get('fautes_subies', 0)
+                if matchs > 0 and fautes / matchs > 2:
+                    score += 8
+                    raisons.append(f"provoque {round(fautes/matchs,1)} fautes par match")
+                
+                # xG
+                xg = stats.get('xg', 0)
+                if matchs > 0 and xg / matchs > 0.3:
+                    score += 10
+                    raisons.append(f"xG de {round(xg/matchs,2)} par match")
                 
                 # Défense fébrile
                 be = def_stats.get('buts_encaisses', 0)
@@ -73,7 +86,7 @@ class AnalysisEngine:
                     pourquoi = f"{nom} ({att_team}) a de bonnes chances contre {def_team}. " + " ".join(raisons) + "."
                 
                 score = min(90, score)
-                if score >= 40 and pourquoi:
+                if score >= 35 and pourquoi:
                     alertes.append({
                         'attaquant': f"{nom} ({att_team})",
                         'probabilite': score,
