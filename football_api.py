@@ -33,6 +33,7 @@ class FootballAPI:
                             "awayTeam": {"name": m["teams"]["away"]["name"]},
                             "utcDate": m["fixture"]["date"],
                             "competition": {"name": league_name},
+                        "league_id": league_id,
                         })
             except:
                 continue

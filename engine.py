@@ -11,7 +11,7 @@ class AnalysisEngine:
         home = match['homeTeam']['name']
         away = match['awayTeam']['name']
         championnat = match.get('competition', {}).get('name', '?')
-        league_id = match.get('league_id', '119')
+        league_id = match.get('league_id', match.get('competition', {}).get('id', '119'))
         
         lineups = self.api.get_lineups(mid)
         if not lineups:
