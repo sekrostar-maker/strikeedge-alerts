@@ -67,6 +67,7 @@ def main():
                 log.info("  %s vs %s (%.0f min)", home, away, minutes)
                 match_data = api.get_lineups(mid)
                 if match_data:
+                    log.info('    Lineups trouvees pour %s vs %s', home, away)
                     # Analyse des mismatches
                     try:
                         alertes = engine.analyse_match(match)
