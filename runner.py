@@ -22,6 +22,7 @@ log = logging.getLogger(__name__)
 
 NOTIFIED_FILE = Path(__file__).parent / "notified.json"
 ALERTES_ENVOYEES = set()
+MATCHS_ANALYSES = set()
 
 def load_notified():
     if not NOTIFIED_FILE.exists():
@@ -68,7 +69,10 @@ def main():
             
             # Analyse sans lineups (stats equipes)
             try:
+                if mid in MATCHS_ANALYSES:
+                    continue
                 alertes_sans = engine.analyse_match_sans_lineups(match)
+                MATCHS_ANALYSES.add(mid)
                 alertes_sans = [a for a in alertes_sans if a['type'] + home + away not in ALERTES_ENVOYEES]
                 for a in alertes_sans:
                     ALERTES_ENVOYEES.add(a['type'] + home + away)
