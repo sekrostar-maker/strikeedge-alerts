@@ -7,58 +7,114 @@ class AnalysisEngine:
         self.api = FootballAPI()
     
     def analyse_match_sans_lineups(self, match):
-        """Analyse sans compos : stats equipes, tendances, H2H"""
         home = match['homeTeam']['name']
         away = match['awayTeam']['name']
         lid = match.get('league_id', '119')
         
-        home_stats = self.api.get_team_stats(home, lid) or {}
-        away_stats = self.api.get_team_stats(away, lid) or {}
+        hs = self.api.get_team_stats(home, lid) or {}
+        as_ = self.api.get_team_stats(away, lid) or {}
+        xg_h = self.api.get_team_xg(home, lid) or {}
+        xg_a = self.api.get_team_xg(away, lid) or {}
         h2h = self.api.get_h2h_teams(home, away)
+        
+        hm = hs.get('matchs', 1) or 1
+        am = as_.get('matchs', 1) or 1
         
         alertes = []
         
-        # Buts domicile vs defense exterieur
-        hm = home_stats.get('matchs', 0) or 1
-        am = away_stats.get('matchs', 0) or 1
-        home_buts = home_stats.get('buts_marques', 0) / hm if hm > 0 else 0
-        away_encaisses = away_stats.get('buts_encaisses', 0) / am if am > 0 else 0
+        # === OVER 2.5 ===
+        h_marque = hs.get('buts_marques', 0) / hm if hm > 0 else 0
+        h_encaisse = hs.get('buts_encaisses', 0) / hm if hm > 0 else 0
+        a_marque = as_.get('buts_marques', 0) / am if am > 0 else 0
+        a_encaisse = as_.get('buts_encaisses', 0) / am if am > 0 else 0
         
-        if home_buts > 0 and away_encaisses > 0:
-            if home_buts > 1.5 and away_encaisses > 1.2:
-                score = min(80, (home_buts + away_encaisses) * 20)
-                alertes.append({
-                    'type': 'equipe',
-                    'equipe': home,
-                    'probabilite': score,
-                    'pourquoi': f"{home} marque {round(home_buts,1)} buts/match, {away} encaisse {round(away_encaisses,1)} buts/match. Forte probabilite de buts pour {home}."
-                })
+        moy_buts = h_marque + a_marque + h_encaisse + a_encaisse
+        over25_prob = min(90, moy_buts * 25)
+        
+        if over25_prob >= 50:
+            alertes.append({
+                'type': 'OVER 2.5 buts',
+                'probabilite': over25_prob,
+                'pourquoi': f"{home}: {round(h_marque,1)} marques/{round(h_encaisse,1)} encaisses. {away}: {round(a_marque,1)} marques/{round(a_encaisse,1)} encaisses par match."
+            })
 
-        # Buts exterieur vs defense domicile
-        away_buts = away_stats.get('buts_marques', 0) / am if am > 0 else 0
-        home_encaisses = home_stats.get('buts_encaisses', 0) / hm if hm > 0 else 0
+        # === OVER 1.5 ===
+        over15_prob = min(92, moy_buts * 30)
+        if over15_prob >= 55:
+            alertes.append({
+                'type': 'OVER 1.5 buts',
+                'probabilite': over15_prob,
+                'pourquoi': f"{home}: {round(h_marque,1)} marques/{round(h_encaisse,1)} encaisses. {away}: {round(a_marque,1)} marques/{round(a_encaisse,1)} encaisses."
+            })
         
-        if away_buts > 0 and home_encaisses > 0:
-            if away_buts > 1.5 and home_encaisses > 1.2:
-                score = min(80, (away_buts + home_encaisses) * 20)
-                alertes.append({
-                    'type': 'equipe',
-                    'equipe': away,
-                    'probabilite': score,
-                    'pourquoi': f"{away} marque {round(away_buts,1)} buts/match, {home} encaisse {round(home_encaisses,1)} buts/match."
-                })
+        # === BTTS ===
+        btts_score = ((h_marque + a_encaisse) / 2 + (a_marque + h_encaisse) / 2) * 20
+        btts_prob = min(88, btts_score)
+        if btts_prob >= 45:
+            alertes.append({
+                'type': 'BTTS OUI',
+                'probabilite': btts_prob,
+                'pourquoi': f"{home} marque {round(h_marque,1)} et encaisse {round(h_encaisse,1)}. {away} marque {round(a_marque,1)} et encaisse {round(a_encaisse,1)}."
+            })
         
-        # H2H : confrontations directes
-        if h2h and h2h['total'] >= 3:
-            total_buts = h2h['buts_team1'] + h2h['buts_team2']
-            moy = total_buts / h2h['total']
-            if moy > 2.5:
-                alertes.append({
-                    'type': 'h2h',
-                    'equipe': '',
-                    'probabilite': min(75, moy * 25),
-                    'pourquoi': f"Moyenne de {round(moy,1)} buts lors des {h2h['total']} dernieres confrontations entre {home} et {away}."
-                })
+        # === VICTOIRE ===
+        diff_home = h_marque - a_encaisse
+        diff_away = a_marque - h_encaisse
+        
+        if diff_home > 0.5:
+            prob = min(85, 50 + diff_home * 15)
+            alertes.append({
+                'type': f'VICTOIRE {home}',
+                'probabilite': prob,
+                'pourquoi': f"{home} marque {round(h_marque,1)} buts/match, {away} encaisse {round(a_encaisse,1)}."
+            })
+        
+        if diff_away > 0.5:
+            prob = min(85, 50 + diff_away * 15)
+            alertes.append({
+                'type': f'VICTOIRE {away}',
+                'probabilite': prob,
+                'pourquoi': f"{away} marque {round(a_marque,1)} buts/match, {home} encaisse {round(h_encaisse,1)}."
+            })
         
         alertes.sort(key=lambda x: x['probabilite'], reverse=True)
-        return alertes[:3]
+        return alertes[:4]
+
+        # === OVER 1.5 ===
+        over15_prob = min(92, moy_buts * 30)
+        if over15_prob >= 55:
+            alertes.append({
+                'type': 'OVER 1.5 buts',
+                'probabilite': over15_prob,
+                'pourquoi': f"{home}: {round(h_marque,1)} marques/{round(h_encaisse,1)} encaisses. {away}: {round(a_marque,1)} marques/{round(a_encaisse,1)} encaisses."
+            })
+
+        # === BTTS ===
+        btts_score = ((h_marque + a_encaisse) / 2 + (a_marque + h_encaisse) / 2) * 20
+        btts_prob = min(88, btts_score)
+        if btts_prob >= 45:
+            alertes.append({
+                'type': 'BTTS OUI',
+                'probabilite': btts_prob,
+                'pourquoi': f"{home} marque {round(h_marque,1)} et encaisse {round(h_encaisse,1)}. {away} marque {round(a_marque,1)} et encaisse {round(a_encaisse,1)}."
+            })
+
+        # === VICTOIRE ===
+        diff_home = h_marque - a_encaisse
+        diff_away = a_marque - h_encaisse
+        if diff_home > 0.5:
+            prob = min(85, 50 + diff_home * 15)
+            alertes.append({
+                'type': f'VICTOIRE {home}',
+                'probabilite': prob,
+                'pourquoi': f"{home} marque {round(h_marque,1)} buts/match, {away} encaisse {round(a_encaisse,1)}."
+            })
+        if diff_away > 0.5:
+            prob = min(85, 50 + diff_away * 15)
+            alertes.append({
+                'type': f'VICTOIRE {away}',
+                'probabilite': prob,
+                'pourquoi': f"{away} marque {round(a_marque,1)} buts/match, {home} encaisse {round(h_encaisse,1)}."
+            })
+        alertes.sort(key=lambda x: x['probabilite'], reverse=True)
+        return alertes[:4]
