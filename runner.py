@@ -71,8 +71,6 @@ def main():
                     log.info('    ALERTE EQUIPE envoyee')
             except Exception as e:
                 pass
-            except:
-                continue
             
             if -15 <= minutes <= 120:
                 log.info("  %s vs %s (%.0f min)", home, away, minutes)
