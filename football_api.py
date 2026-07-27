@@ -176,3 +176,33 @@ class FootballAPI:
         except:
             pass
         return None
+
+    def get_team_form(self, team_name, league_id, nb=5):
+        """Forme récente : derniers matchs avec buts marqués/encaissés"""
+        try:
+            resp = self.session.get(f"{BASE_URL}/fixtures", params={"team": team_name, "league": league_id, "season": "2026", "last": nb, "status": "FT"}, timeout=10)
+            if resp.status_code == 200:
+                matches = resp.json().get("response", [])
+                buts_marques = 0
+                buts_encaisses = 0
+                over25 = 0
+                btts = 0
+                for m in matches:
+                    is_home = m["teams"]["home"]["name"] == team_name
+                    scored = m["goals"]["home"] if is_home else m["goals"]["away"]
+                    conceded = m["goals"]["away"] if is_home else m["goals"]["home"]
+                    buts_marques += scored
+                    buts_encaisses += conceded
+                    if scored + conceded >= 3: over25 += 1
+                    if scored > 0 and conceded > 0: btts += 1
+                n = len(matches) or 1
+                return {
+                    "matchs": n,
+                    "buts_marques": round(buts_marques/n, 1),
+                    "buts_encaisses": round(buts_encaisses/n, 1),
+                    "over25_pct": round(over25/n*100),
+                    "btts_pct": round(btts/n*100)
+                }
+        except:
+            pass
+        return None
