@@ -115,3 +115,62 @@ class Brain:
         c.execute('SELECT COUNT(*) FROM alert_history')
         alertes = c.fetchone()[0]
         return f"🧠 Cerveau: {matchs} matchs, {stats} stats joueurs, {h2h} H2H, {alertes} alertes"
+
+    def save_prediction(self, match_id, match_name, prediction_type, prob, result=None):
+        c = self.db.cursor()
+        c.execute('''CREATE TABLE IF NOT EXISTS predictions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            date TEXT, match_id_api INTEGER, match_name TEXT,
+            prediction_type TEXT, probability REAL, result TEXT)''')
+        c.execute('INSERT INTO predictions (date, match_id_api, match_name, prediction_type, probability, result) VALUES (?, ?, ?, ?, ?, ?)',
+                  (datetime.now().strftime("%Y-%m-%d %H:%M"), match_id, match_name, prediction_type, prob, result))
+        self.db.commit()
+
+    def update_prediction_result(self, match_name, prediction_type, result):
+        c = self.db.cursor()
+        c.execute('UPDATE predictions SET result=? WHERE match_name=? AND prediction_type=? AND result IS NULL',
+                  (result, match_name, prediction_type))
+        self.db.commit()
+
+    def get_success_rate(self):
+        c = self.db.cursor()
+        c.execute('''SELECT prediction_type, COUNT(*) as total, 
+                     SUM(CASE WHEN result="GAGNE" THEN 1 ELSE 0 END) as gagne
+                     FROM predictions WHERE result IS NOT NULL 
+                     GROUP BY prediction_type ORDER BY total DESC''')
+        rows = c.fetchall()
+        stats = {}
+        for r in rows:
+            total = r['total']
+            gagne = r['gagne'] or 0
+            stats[r['prediction_type']] = {"total": total, "gagne": gagne, "taux": round(gagne/total*100) if total > 0 else 0}
+        return stats
+
+    def save_prediction(self, match_id, match_name, pred_type, prob, result=None):
+        c = self.db.cursor()
+        c.execute('''CREATE TABLE IF NOT EXISTS predictions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            date TEXT, match_id_api INTEGER, match_name TEXT,
+            prediction_type TEXT, probability REAL, result TEXT)''')
+        c.execute('INSERT INTO predictions (date, match_id_api, match_name, prediction_type, probability, result) VALUES (?, ?, ?, ?, ?, ?)',
+                  (datetime.now().strftime("%Y-%m-%d %H:%M"), match_id, match_name, pred_type, prob, result))
+        self.db.commit()
+
+    def update_result(self, match_name, pred_type, result):
+        c = self.db.cursor()
+        c.execute('UPDATE predictions SET result=? WHERE match_name=? AND prediction_type=? AND result IS NULL', (result, match_name, pred_type))
+        self.db.commit()
+
+    def get_success_rate(self):
+        c = self.db.cursor()
+        c.execute('''SELECT prediction_type, COUNT(*) as total, 
+                     SUM(CASE WHEN result="GAGNE" THEN 1 ELSE 0 END) as gagne
+                     FROM predictions WHERE result IS NOT NULL 
+                     GROUP BY prediction_type ORDER BY total DESC''')
+        rows = c.fetchall()
+        stats = {}
+        for r in rows:
+            t = r['total']
+            g = r['gagne'] or 0
+            stats[r['prediction_type']] = {"total": t, "gagne": g, "taux": round(g/t*100) if t>0 else 0}
+        return stats

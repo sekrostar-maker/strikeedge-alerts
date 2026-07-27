@@ -5,6 +5,7 @@ from config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
 from football_api import FootballAPI
 from telegram_bot import TelegramBot
 from engine import AnalysisEngine
+from brain import Brain
 from alert_sender import envoyer_alertes
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s", datefmt="%Y-%m-%d %H:%M:%S", handlers=[logging.StreamHandler(sys.stdout)])
@@ -29,6 +30,7 @@ def main():
     api = FootballAPI()
     bot = TelegramBot()
     engine = AnalysisEngine()
+    brain = Brain()
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     notified = load_notified()
     sent = 0
@@ -68,6 +70,8 @@ def main():
                 if alertes:
                     envoyer_alertes({'domicile':home,'exterieur':away,'heure':match.get('utcDate','?'),'championnat':api.get_competition_name(match)}, alertes)
                     log.info("    ALERTE envoyee")
+                    for a in alertes:
+                        brain.save_prediction(mid, f"{home} vs {away}", a['type'], a['probabilite'])
             except Exception as e:
                 log.error("    Erreur: %s", e)
 
