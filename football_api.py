@@ -81,6 +81,29 @@ class FootballAPI:
         return None
 
     def get_h2h_teams(self, team1, team2):
+        try:
+            resp = self.session.get(f"{BASE_URL}/fixtures/headtohead", params={"h2h": f"{team1}-{team2}"}, timeout=10)
+            if resp.status_code == 200:
+                matches = resp.json().get("response", [])
+                scores = []
+                buts_t1 = 0
+                buts_t2 = 0
+                for m in matches:
+                    h = m["teams"]["home"]["name"]
+                    a = m["teams"]["away"]["name"]
+                    gh = m["goals"]["home"]
+                    ga = m["goals"]["away"]
+                    scores.append(f"{h} {gh}-{ga} {a}")
+                    if h == team1:
+                        buts_t1 += gh
+                        buts_t2 += ga
+                    else:
+                        buts_t1 += ga
+                        buts_t2 += gh
+                return {"total": len(matches), "scores": scores, "buts_team1": buts_t1, "buts_team2": buts_t2}
+        except:
+            pass
+        return None
         """Historique des confrontations entre 2 équipes"""
         try:
             resp = self.session.get(f"{BASE_URL}/fixtures/headtohead", params={"h2h": f"{team1}-{team2}"}, timeout=10)
