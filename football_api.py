@@ -229,3 +229,41 @@ class FootballAPI:
         except:
             pass
         return None
+
+    def get_team_goals(self, team_name, league_id):
+        try:
+            resp = self.session.get(f"{BASE_URL}/teams", params={"search": team_name}, timeout=10)
+            if resp.status_code == 200:
+                for t in resp.json().get("response", []):
+                    if t["team"]["name"] == team_name:
+                        tid = t["team"]["id"]
+                        r2 = self.session.get(f"{BASE_URL}/teams/statistics", params={"team": tid, "league": league_id, "season": "2026"}, timeout=10)
+                        if r2.status_code == 200:
+                            d = r2.json().get("response", {})
+                            g = d.get("goals", {}).get("for", {})
+                            return {
+                                "domicile": g.get("total", {}).get("home", 0) or 0,
+                                "exterieur": g.get("total", {}).get("away", 0) or 0,
+                                "over15": g.get("under_over", {}).get("1.5", {}).get("over", 0) or 0,
+                                "over25": g.get("under_over", {}).get("2.5", {}).get("over", 0) or 0,
+                                "btts": 0
+                            }
+        except:
+            pass
+        return {}
+
+    def get_team_cards(self, team_name, league_id):
+        try:
+            resp = self.session.get(f"{BASE_URL}/teams", params={"search": team_name}, timeout=10)
+            if resp.status_code == 200:
+                for t in resp.json().get("response", []):
+                    if t["team"]["name"] == team_name:
+                        tid = t["team"]["id"]
+                        r2 = self.session.get(f"{BASE_URL}/teams/statistics", params={"team": tid, "league": league_id, "season": "2026"}, timeout=10)
+                        if r2.status_code == 200:
+                            d = r2.json().get("response", {})
+                            c = d.get("cards", {})
+                            return {"jaunes": c.get("yellow", {}).get("total", 0) or 0, "rouges": c.get("red", {}).get("total", 0) or 0}
+        except:
+            pass
+        return {}
