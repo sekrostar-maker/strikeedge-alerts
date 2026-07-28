@@ -267,3 +267,33 @@ class FootballAPI:
         except:
             pass
         return {}
+
+    def get_team_penalties(self, team_name, league_id):
+        try:
+            resp = self.session.get(f"{BASE_URL}/teams", params={"search": team_name}, timeout=10)
+            if resp.status_code == 200:
+                for t in resp.json().get("response", []):
+                    if t["team"]["name"] == team_name:
+                        tid = t["team"]["id"]
+                        r2 = self.session.get(f"{BASE_URL}/teams/statistics", params={"team": tid, "league": league_id, "season": "2026"}, timeout=10)
+                        if r2.status_code == 200:
+                            p = r2.json().get("response", {}).get("penalty", {})
+                            return {"marques": p.get("scored", {}).get("total", 0) or 0, "total": p.get("total", 0) or 0}
+        except:
+            pass
+        return {}
+
+    def get_team_failed_to_score(self, team_name, league_id):
+        try:
+            resp = self.session.get(f"{BASE_URL}/teams", params={"search": team_name}, timeout=10)
+            if resp.status_code == 200:
+                for t in resp.json().get("response", []):
+                    if t["team"]["name"] == team_name:
+                        tid = t["team"]["id"]
+                        r2 = self.session.get(f"{BASE_URL}/teams/statistics", params={"team": tid, "league": league_id, "season": "2026"}, timeout=10)
+                        if r2.status_code == 200:
+                            fts = r2.json().get("response", {}).get("failed_to_score", {})
+                            return {"total": fts.get("total", 0) or 0}
+        except:
+            pass
+        return {}

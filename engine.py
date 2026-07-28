@@ -15,6 +15,10 @@ class AnalysisEngine:
         as_ = self.api.get_team_stats(away, lid) or {}
         h2h = self.api.get_h2h_teams(home, away)
         form_h = self.api.get_team_form(home, lid) or {}
+        pen_h = self.api.get_team_penalties(home, lid) or {}
+        pen_a = self.api.get_team_penalties(away, lid) or {}
+        fts_h = self.api.get_team_failed_to_score(home, lid) or {}
+        fts_a = self.api.get_team_failed_to_score(away, lid) or {}
         form_a = self.api.get_team_form(away, lid) or {}
         cards_h = self.api.get_team_cards(home, lid) or {}
         cards_a = self.api.get_team_cards(away, lid) or {}
