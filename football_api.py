@@ -297,3 +297,66 @@ class FootballAPI:
         except:
             pass
         return {}
+
+    def get_player_full_stats(self, player_name, team_name):
+        """Recherche par equipe + nom, plus fiable"""
+        try:
+            # Etape 1: chercher par equipe
+            resp = self.session.get(f"{BASE_URL}/players", params={"team": team_name, "season": "2026"}, timeout=10)
+            if resp.status_code == 200:
+                for p in resp.json().get("response", []):
+                    if player_name.lower() in p["player"]["name"].lower():
+                        for s in p.get("statistics", []):
+                            if s.get("team",{}).get("name") == team_name:
+                                return self._parse_player_stats(s)
+            # Etape 2: fallback recherche par nom
+            resp = self.session.get(f"{BASE_URL}/players", params={"search": player_name, "season": "2026"}, timeout=10)
+            if resp.status_code == 200:
+                for p in resp.json().get("response", []):
+                    for s in p.get("statistics", []):
+                        if s.get("team",{}).get("name") == team_name:
+                            return self._parse_player_stats(s)
+        except:
+            pass
+        return None
+
+    def _parse_player_stats(self, s):
+        return {
+            "matchs": s.get("games",{}).get("appearences",0) or 0,
+            "minutes": s.get("games",{}).get("minutes",0) or 0,
+            "buts": s.get("goals",{}).get("total",0) or 0,
+            "passes_decisives": s.get("goals",{}).get("assists",0) or 0,
+            "tirs": s.get("shots",{}).get("total",0) or 0,
+            "tirs_cadres": s.get("shots",{}).get("on",0) or 0,
+            "passes_cles": s.get("passes",{}).get("key",0) or 0,
+            "dribbles_reussis": s.get("dribbles",{}).get("success",0) or 0,
+            "duels_gagnes": s.get("duels",{}).get("won",0) or 0,
+            "fautes_subies": s.get("fouls",{}).get("drawn",0) or 0,
+            "cartons_jaunes": s.get("cards",{}).get("yellow",0) or 0,
+            "cartons_rouges": s.get("cards",{}).get("red",0) or 0,
+            "penalties_marques": s.get("penalty",{}).get("scored",0) or 0,
+        }
+        try:
+            resp = self.session.get(f"{BASE_URL}/players", params={"search": player_name, "season": "2026"}, timeout=10)
+            if resp.status_code == 200:
+                for p in resp.json().get("response", []):
+                    for s in p.get("statistics", []):
+                        if s.get("team",{}).get("name") == team_name:
+                            return {
+                                "matchs": s.get("games",{}).get("appearences",0) or 0,
+                                "minutes": s.get("games",{}).get("minutes",0) or 0,
+                                "buts": s.get("goals",{}).get("total",0) or 0,
+                                "passes_decisives": s.get("goals",{}).get("assists",0) or 0,
+                                "tirs": s.get("shots",{}).get("total",0) or 0,
+                                "tirs_cadres": s.get("shots",{}).get("on",0) or 0,
+                                "passes_cles": s.get("passes",{}).get("key",0) or 0,
+                                "dribbles_reussis": s.get("dribbles",{}).get("success",0) or 0,
+                                "duels_gagnes": s.get("duels",{}).get("won",0) or 0,
+                                "fautes_subies": s.get("fouls",{}).get("drawn",0) or 0,
+                                "cartons_jaunes": s.get("cards",{}).get("yellow",0) or 0,
+                                "cartons_rouges": s.get("cards",{}).get("red",0) or 0,
+                                "penalties_marques": s.get("penalty",{}).get("scored",0) or 0,
+                            }
+        except:
+            pass
+        return None
