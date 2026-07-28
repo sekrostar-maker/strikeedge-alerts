@@ -6,13 +6,10 @@ BASE_URL = "https://v3.football.api-sports.io"
 HEADERS = {"x-apisports-key": API_KEY}
 
 LEAGUES = {
-    "71": "Bresil Serie A", "119": "Danemark Superliga",
-    "244": "Finlande Veikkausliiga", "164": "Islande Urvalsdeild",
-    "103": "Norvege Eliteserien", "113": "Suede Allsvenskan",
-    "253": "MLS", "61": "Ligue 1", "135": "Serie A",
-    "78": "Bundesliga", "94": "Primeira Liga", "88": "Eredivisie",
-    "283": "Roumanie Liga I", "106": "Pologne Ekstraklasa",
-    "140": "Espagne La Liga",
+    "61": "Ligue 1", "135": "Serie A", "78": "Bundesliga",
+    "39": "Premier League", "140": "Espagne La Liga",
+    "119": "Danemark Superliga", "103": "Norvege Eliteserien",
+    "113": "Suede Allsvenskan", "253": "MLS",
 }
 
 class FootballAPI:
