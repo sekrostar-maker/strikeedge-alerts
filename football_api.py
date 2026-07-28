@@ -178,9 +178,32 @@ class FootballAPI:
         return None
 
     def get_team_form(self, team_name, league_id, nb=5):
+        """Forme récente depuis les stats de l'équipe"""
+        try:
+            resp = self.session.get(f"{BASE_URL}/teams", params={"search": team_name}, timeout=10)
+            if resp.status_code == 200:
+                for t in resp.json().get("response", []):
+                    if t["team"]["name"] == team_name:
+                        tid = t["team"]["id"]
+                        r2 = self.session.get(f"{BASE_URL}/teams/statistics", params={"team": tid, "league": league_id, "season": "2026"}, timeout=10)
+                        if r2.status_code == 200:
+                            d = r2.json().get("response", {})
+                            form = d.get("form", "")
+                            goals = d.get("goals", {}).get("for", {}).get("minute", {})
+                            return {
+                                "forme_str": form[-nb:] if form else "",
+                                "victoires": form[-nb:].count("W") if form else 0,
+                                "nuls": form[-nb:].count("D") if form else 0,
+                                "defaites": form[-nb:].count("L") if form else 0
+                            }
+        except:
+            pass
+        return {}
         """Forme récente : derniers matchs avec buts marqués/encaissés"""
         try:
-            resp = self.session.get(f"{BASE_URL}/fixtures", params={"team": team_name, "league": league_id, "season": "2026", "last": nb, "status": "FT"}, timeout=10)
+            resp = self.session.get(f"{BASE_URL}/fixtures", params={"team": team_name, "league": league_id, "season": "2026", "status": "FT"}, timeout=10)
+            if resp.status_code == 200:
+                matches = resp.json().get("response", [])[-nb:]
             if resp.status_code == 200:
                 matches = resp.json().get("response", [])
                 buts_marques = 0
