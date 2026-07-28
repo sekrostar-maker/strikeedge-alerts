@@ -61,7 +61,7 @@ Analyse et donne probabilites (%) + resume pour:
 - OVER 2.5 buts
 - BTTS OUI
 - VICTOIRE (quelle equipe)
-Reponds en JSON uniquement."""
+Reponds en JSON uniquement avec un champ "conseil" qui indique le pari le plus recommande."""
         return block
 
     def analyse_with_groq(self, match):
