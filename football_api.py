@@ -383,3 +383,22 @@ class FootballAPI:
         except:
             pass
         return None
+
+    def get_match_events(self, match_id):
+        """Recupere les buteurs et passeurs d'un match"""
+        try:
+            resp = self.session.get(f"{BASE_URL}/fixtures", params={"id": match_id}, timeout=10)
+            if resp.status_code == 200 and resp.json().get("response"):
+                m = resp.json()["response"][0]
+                events = []
+                for e in m.get("events", []):
+                    if e.get("type") == "Goal":
+                        events.append({
+                            "joueur": e.get("player", {}).get("name", ""),
+                            "equipe": e.get("team", {}).get("name", ""),
+                            "minute": e.get("time", {}).get("elapsed", 0)
+                        })
+                return events
+        except:
+            pass
+        return []

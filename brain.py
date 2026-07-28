@@ -174,3 +174,26 @@ class Brain:
             g = r['gagne'] or 0
             stats[r['prediction_type']] = {"total": t, "gagne": g, "taux": round(g/t*100) if t>0 else 0}
         return stats
+
+    def add_player_h2h(self, joueur, equipe_adverse, buts):
+        """Enregistre les buts d'un joueur contre une equipe"""
+        c = self.db.cursor()
+        c.execute('''CREATE TABLE IF NOT EXISTS player_h2h (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            joueur TEXT, equipe_adverse TEXT,
+            matchs INTEGER DEFAULT 0, buts INTEGER DEFAULT 0,
+            UNIQUE(joueur, equipe_adverse))''')
+        c.execute('SELECT * FROM player_h2h WHERE joueur=? AND equipe_adverse=?', (joueur, equipe_adverse))
+        row = c.fetchone()
+        if row:
+            c.execute('UPDATE player_h2h SET matchs=matchs+1, buts=buts+? WHERE joueur=? AND equipe_adverse=?', (buts, joueur, equipe_adverse))
+        else:
+            c.execute('INSERT INTO player_h2h (joueur, equipe_adverse, matchs, buts) VALUES (?, ?, 1, ?)', (joueur, equipe_adverse, buts))
+        self.db.commit()
+
+    def get_player_h2h(self, joueur, equipe_adverse):
+        """Recupere l'historique d'un joueur contre une equipe"""
+        c = self.db.cursor()
+        c.execute('SELECT * FROM player_h2h WHERE joueur=? AND equipe_adverse=?', (joueur, equipe_adverse))
+        row = c.fetchone()
+        return dict(row) if row else None

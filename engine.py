@@ -63,3 +63,49 @@ Analyse et donne probabilites (%) + resume pour:
 - VICTOIRE (quelle equipe)
 Reponds en JSON uniquement."""
         return block
+
+    def analyse_with_groq(self, match):
+        """Envoie les stats a Groq (Llama 3) et recupere les probas"""
+        block = self.build_stats_block(match)
+        try:
+            import requests
+            r = requests.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers={"Authorization": "Bearer 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", "Content-Type": "application/json"},
+                json={"model": "llama-3.3-70b-versatile", "messages": [{"role": "user", "content": block}], "temperature": 0.3},
+                timeout=30
+            )
+            if r.status_code == 200:
+                return r.json()["choices"][0]["message"]["content"]
+        except:
+            pass
+        return None
+
+    def analyse_match_sans_lineups(self, match):
+        result = self.analyse_with_groq(match)
+        if result:
+            try:
+                data = json.loads(result)
+                alertes = []
+                for k, v in data.items():
+                    if isinstance(v, dict) and v.get('prob') or v.get('probabilite', 0) >= 60:
+                        alertes.append({'type': k.replace('_',' '), 'probabilite': v['prob'], 'pourquoi': v.get('resume','')})
+                alertes.sort(key=lambda x: x['probabilite'], reverse=True)
+                return alertes[:4]
+            except:
+                pass
+        # Fallback basique
+        home = match['homeTeam']['name']
+        away = match['awayTeam']['name']
+        lid = match.get('league_id','')
+        hs = self.api.get_team_stats(home, lid) or {}
+        as_ = self.api.get_team_stats(away, lid) or {}
+        hm = hs.get('matchs',1) or 1
+        am = as_.get('matchs',1) or 1
+        h_marque = hs.get('buts_marques',0)/hm
+        a_marque = as_.get('buts_marques',0)/am
+        alertes = []
+        over15 = 55 + (h_marque + a_marque)*10
+        if over15 >= 60:
+            alertes.append({'type':'OVER 1.5 buts','probabilite':min(90,over15),'pourquoi':f'{home}: {round(h_marque,1)}M - {away}: {round(a_marque,1)}M'})
+        return alertes[:2]
