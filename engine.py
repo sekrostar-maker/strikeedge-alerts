@@ -71,7 +71,7 @@ Reponds en JSON uniquement."""
             import requests
             r = requests.post(
                 "https://api.groq.com/openai/v1/chat/completions",
-                headers={"Authorization": "Bearer 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", "Content-Type": "application/json"},
+                headers={"Authorization": "Bearer ${secrets.GROQ_API_KEY}", "Content-Type": "application/json"},
                 json={"model": "llama-3.3-70b-versatile", "messages": [{"role": "user", "content": block}], "temperature": 0.3},
                 timeout=30
             )
