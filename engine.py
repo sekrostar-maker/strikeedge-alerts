@@ -50,7 +50,6 @@ class AnalysisEngine:
 Analyse et donne probabilites (%) + resume pour OVER 1.5, OVER 2.5, BTTS OUI, VICTOIRE.
 Reponds en JSON uniquement."""
         return block
-  Forme: {form_a.get("forme_str","?")}
         if h2h and h2h['total'] > 0:
             block += f"""
 📊 H2H: {h2h['total']} matchs
