@@ -129,4 +129,7 @@ Reponds en JSON uniquement avec un champ "conseil" qui indique le pari le plus r
                     alertes.append({'type': label, 'probabilite': prob, 'pourquoi': data[key].get('reason','')})
         if data.get('conseil'):
             alertes.append({'type': 'CONSEIL', 'probabilite': 100, 'pourquoi': data['conseil']})
+        if data.get('scorer') and data['scorer'].get('player'):
+            s = data['scorer']
+            alertes.append({'type': f'BUTEUR {s.get("player","?")} ({s.get("team","?")})', 'probabilite': s.get('confidence', 0), 'pourquoi': s.get('reason', '')})
         return alertes[:4]
