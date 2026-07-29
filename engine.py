@@ -1,5 +1,6 @@
 from brain import Brain
 from football_api import FootballAPI
+from claude_nordic_analyzer import analyze_nordic_match
 import json
 
 class AnalysisEngine:
@@ -82,7 +83,14 @@ Reponds en JSON uniquement avec un champ "conseil" qui indique le pari le plus r
         return None
 
     def analyse_match_sans_lineups(self, match):
-        result = self.analyse_with_groq(match)
+        competition = match.get('competition', {}).get('name', '')
+        if competition in ['Allsvenskan', 'Superliga', 'Eliteserien']:
+            claude_result = analyze_nordic_match(match)
+            if claude_result and 'error' not in claude_result:
+                return self._parse_claude_result(claude_result)
+            result = None
+        else:
+            result = self.analyse_with_groq(match)
         if result:
             try:
                 data = json.loads(result)
@@ -109,3 +117,16 @@ Reponds en JSON uniquement avec un champ "conseil" qui indique le pari le plus r
         if over15 >= 60:
             alertes.append({'type':'OVER 1.5 buts','probabilite':min(90,over15),'pourquoi':f'{home}: {round(h_marque,1)}M - {away}: {round(a_marque,1)}M'})
         return alertes[:2]
+
+    def _parse_claude_result(self, data):
+        alertes = []
+        for key, label in [('over15','OVER 1.5'),('over25','OVER 2.5'),('btts','BTTS'),('victory','VICTOIRE')]:
+            if key in data and isinstance(data[key], dict):
+                prob = data[key].get('probability', 0)
+                if key == 'victory':
+                    prob = data[key].get('probability', 0)
+                if prob >= 60:
+                    alertes.append({'type': label, 'probabilite': prob, 'pourquoi': data[key].get('reason','')})
+        if data.get('conseil'):
+            alertes.append({'type': 'CONSEIL', 'probabilite': 100, 'pourquoi': data['conseil']})
+        return alertes[:4]
