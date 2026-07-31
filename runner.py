@@ -40,10 +40,6 @@ def main():
         now = datetime.now(timezone.utc)
         matches = api.get_fixtures(today)
         log.info("Cycle %d: %d matchs", cycle+1, len(matches))
-    for cycle in range(8):
-        now = datetime.now(timezone.utc)
-        matches = api.get_fixtures(today)
-        log.info("Cycle %d: %d matchs", cycle+1, len(matches))
 
         for match in matches:
             mid = match["id"]
