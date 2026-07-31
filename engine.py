@@ -1,7 +1,8 @@
 from brain import Brain
 from football_api import FootballAPI
 from claude_nordic_analyzer import analyze_nordic_match
-import json
+import json, logging
+log = logging.getLogger(__name__)
 
 class AnalysisEngine:
     def __init__(self):
@@ -86,6 +87,7 @@ Reponds en JSON uniquement avec un champ "conseil" qui indique le pari le plus r
         competition = match.get('competition', {}).get('name', '')
         if competition in ['Allsvenskan', 'Superliga', 'Eliteserien']:
             claude_result = analyze_nordic_match(match)
+                log.info('Claude result: %s', str(claude_result)[:100])
             if claude_result and 'error' not in claude_result:
                 return self._parse_claude_result(claude_result)
             result = None
