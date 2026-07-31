@@ -87,10 +87,10 @@ Reponds en JSON uniquement avec un champ "conseil" qui indique le pari le plus r
         competition = match.get('competition', {}).get('name', '')
         if competition in ['Allsvenskan', 'Superliga', 'Eliteserien']:
             claude_result = analyze_nordic_match(match)
-                log.info('Claude result: %s', str(claude_result)[:100])
+            log.info('Claude result: %s', str(claude_result)[:100])
             if claude_result and 'error' not in claude_result:
                 return self._parse_claude_result(claude_result)
-            result = None
+            return [{'type': 'ERREUR', 'probabilite': 0, 'pourquoi': str(claude_result.get('error','?'))[:100]}]
         else:
             result = self.analyse_with_groq(match)
         if result:
