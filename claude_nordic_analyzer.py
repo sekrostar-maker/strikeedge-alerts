@@ -3,7 +3,7 @@ import os, json, re, requests
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
 MODEL = "claude-sonnet-4-6"
-NORDIC_LEAGUES = {"Allsvenskan", "Superliga", "Eliteserien"}
+NORDIC_LEAGUES = {"Allsvenskan", "Superliga", "Eliteserien", "Norvege Eliteserien", "Suede Allsvenskan", "Danemark Superliga"}
 
 def _build_prompt(match):
     home = match["homeTeam"]["name"]
