@@ -61,6 +61,7 @@ def main():
             log.info("  %s vs %s (%.0f min)", home, away, minutes)
             MATCHS_ANALYSES.add(mid)
             competition_name = api.get_competition_name(match)
+            log.info('    Competition: %s, Nordique: %s', competition_name, competition_name in NORDIC_LEAGUES)
 
             # Si championnat nordique -> Claude DIRECTEMENT
             if competition_name in NORDIC_LEAGUES:
