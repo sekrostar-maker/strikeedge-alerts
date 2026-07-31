@@ -6,6 +6,7 @@ from config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
 from football_api import FootballAPI
 from telegram_bot import TelegramBot
 from engine import AnalysisEngine
+from claude_nordic_analyzer import analyze_nordic_match, NORDIC_LEAGUES
 from brain import Brain
 from alert_sender import envoyer_alertes
 
