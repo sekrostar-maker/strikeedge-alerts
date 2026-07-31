@@ -1,5 +1,6 @@
 import json, logging, sys, time
 from datetime import datetime, timezone
+from datetime import datetime, timezone
 from pathlib import Path
 from config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
 from football_api import FootballAPI
