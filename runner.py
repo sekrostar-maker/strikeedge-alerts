@@ -56,7 +56,7 @@ def main():
             except:
                 continue
             
-            if not (-15 <= minutes <= 120):
+            if not (-120 <= minutes <= 120):
                 continue
             
             if mid in MATCHS_ANALYSES:
