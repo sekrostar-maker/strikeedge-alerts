@@ -1,10 +1,8 @@
 import json, logging, sys, time
 from datetime import datetime, timezone
-from datetime import datetime, timezone
 from pathlib import Path
 from config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
 from football_api import FootballAPI
-from telegram_bot import TelegramBot
 from engine import AnalysisEngine
 from claude_nordic_analyzer import analyze_nordic_match, NORDIC_LEAGUES
 from brain import Brain
@@ -30,7 +28,6 @@ def save_notified(ids):
 
 def main():
     api = FootballAPI()
-    bot = TelegramBot()
     engine = AnalysisEngine()
     brain = Brain()
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
@@ -39,6 +36,10 @@ def main():
 
     log.info("=== Run started ===")
     
+    for cycle in range(8):
+        now = datetime.now(timezone.utc)
+        matches = api.get_fixtures(today)
+        log.info("Cycle %d: %d matchs", cycle+1, len(matches))
     for cycle in range(8):
         now = datetime.now(timezone.utc)
         matches = api.get_fixtures(today)
@@ -55,33 +56,44 @@ def main():
             except:
                 continue
             
-            # Seulement les matchs entre 2h avant et 15min après
             if not (-15 <= minutes <= 120):
                 continue
             
-            # Déjà analysé ? on passe
             if mid in MATCHS_ANALYSES:
                 continue
             
             log.info("  %s vs %s (%.0f min)", home, away, minutes)
             MATCHS_ANALYSES.add(mid)
-            
-            # Analyse sans lineups
-            try:
-                alertes = engine.analyse_match_sans_lineups(match)
-                if alertes:
-                    envoyer_alertes({'domicile':home,'exterieur':away,'heure':match.get('utcDate','?'),'championnat':api.get_competition_name(match)}, alertes)
-                    log.info("    ALERTE envoyee")
-                    for a in alertes:
-                        brain.save_prediction(mid, f"{home} vs {away}", a['type'], a['probabilite'])
-            except Exception as e:
-                log.error("    Erreur: %s", e)
+            competition_name = api.get_competition_name(match)
+
+            # Si championnat nordique -> Claude DIRECTEMENT
+            if competition_name in NORDIC_LEAGUES:
+                log.info("    Appel Claude pour %s vs %s", home, away)
+                claude_result = analyze_nordic_match(match)
+                if claude_result and 'error' not in claude_result:
+                    alertes = engine._parse_claude_result(claude_result)
+                    if alertes:
+                        envoyer_alertes({'domicile':home,'exterieur':away,'heure':match.get('utcDate','?'),'championnat':competition_name}, alertes)
+                        log.info("    ALERTE CLAUDE envoyee")
+                else:
+                    log.error("    Claude error: %s", str(claude_result)[:200])
+            else:
+                # Sinon -> Groq/Fallback
+                try:
+                    alertes_sans = engine.analyse_match_sans_lineups(match)
+                    if alertes_sans:
+                        envoyer_alertes({'domicile':home,'exterieur':away,'heure':match.get('utcDate','?'),'championnat':competition_name}, alertes_sans)
+                        log.info("    ALERTE envoyee")
+                        for a in alertes_sans:
+                            brain.save_prediction(mid, f"{home} vs {away}", a['type'], a['probabilite'])
+                except Exception as e:
+                    log.error("    Erreur: %s", e)
 
         save_notified(notified)
         if cycle < 7:
             time.sleep(120)
     
-    log.info("=== Done. Alertes: %d ===", sent)
+    log.info("=== Done ===")
 
 if __name__ == "__main__":
     main()
