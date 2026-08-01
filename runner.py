@@ -84,6 +84,25 @@ def main():
                     if alertes:
                         envoyer_alertes({'domicile':home,'exterieur':away,'heure':match.get('utcDate','?'),'championnat':competition_name}, alertes)
                         log.info("    ALERTE CLAUDE envoyee")
+                        # Ajouter les cotes
+                        odds = api.get_odds(mid)
+                        if odds:
+                            for a in alertes:
+                                if 'OVER 2.5' in a['type']:
+                                    cote = odds.get('totals', {}).get('Over 2.5')
+                                    if cote:
+                                        vb = engine.compare_odds(a['probabilite'], cote)
+                                        if vb: a['pourquoi'] += ' | ' + vb
+                                if 'OVER 1.5' in a['type']:
+                                    cote = odds.get('totals', {}).get('Over 1.5')
+                                    if cote:
+                                        vb = engine.compare_odds(a['probabilite'], cote)
+                                        if vb: a['pourquoi'] += ' | ' + vb
+                                if 'BTTS' in a['type']:
+                                    cote = odds.get('btts', {}).get('Yes')
+                                    if cote:
+                                        vb = engine.compare_odds(a['probabilite'], cote)
+                                        if vb: a['pourquoi'] += ' | ' + vb
                 else:
                     log.error("    Claude error: %s", str(claude_result)[:200])
             else:

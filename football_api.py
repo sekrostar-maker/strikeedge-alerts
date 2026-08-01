@@ -399,3 +399,27 @@ class FootballAPI:
         except:
             pass
         return []
+
+    def get_odds(self, match_id):
+        """Recupere les cotes pour un match (Winamax si dispo)"""
+        try:
+            import requests as r
+            resp = r.get(f"https://api.the-odds-api.com/v4/sports/soccer/events/{match_id}/odds", params={"apiKey": "80f3e611f09d025bc3580d6e530db9f7", "regions": "eu", "markets": "h2h,totals,btts", "bookmakers": "winamax"}, timeout=10)
+            if resp.status_code == 200:
+                data = resp.json()
+                odds = {"bookmaker": "winamax", "h2h": {}, "totals": {}, "btts": {}}
+                for bm in data.get("bookmakers", []):
+                    for market in bm.get("markets", []):
+                        if market["key"] == "h2h":
+                            for o in market["outcomes"]:
+                                odds["h2h"][o["name"]] = o["price"]
+                        if market["key"] == "totals":
+                            for o in market["outcomes"]:
+                                odds["totals"][o["name"]] = o["price"]
+                        if market["key"] == "btts":
+                            for o in market["outcomes"]:
+                                odds["btts"][o["name"]] = o["price"]
+                return odds
+        except:
+            pass
+        return None

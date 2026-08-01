@@ -135,3 +135,12 @@ Reponds en JSON uniquement avec un champ "conseil" qui indique le pari le plus r
             s = data['scorer']
             alertes.append({'type': f'BUTEUR {s.get("player","?")} ({s.get("team","?")})', 'probabilite': s.get('confidence', 0), 'pourquoi': s.get('reason', '')})
         return alertes[:4]
+
+    def compare_odds(self, proba, cote, seuil=10):
+        """Detecte un value bet si la proba implicite est > cote"""
+        if cote and cote > 1.1:
+            proba_implicite = 100 / cote
+            diff = proba - proba_implicite
+            if diff > seuil:
+                return f"VALUE BET (+{round(diff)}%) - Cote: {cote}"
+        return None
