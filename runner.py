@@ -59,6 +59,11 @@ def main():
                 continue
             
             log.info("  %s vs %s (%.0f min)", home, away, minutes)
+            # Verifier que le championnat a au moins 5 matchs joues
+            hs = api.get_team_stats(home, match.get('league_id',''))
+            if hs and hs.get('matchs', 0) < 5:
+                log.info("    Skipped: moins de 5 matchs joues")
+                continue
             MATCHS_ANALYSES.add(mid)
             notified.add(mid)
             competition_name = api.get_competition_name(match)
