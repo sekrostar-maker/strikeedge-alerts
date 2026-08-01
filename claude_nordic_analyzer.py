@@ -16,8 +16,20 @@ MATCH : {home} vs {away}
 CHAMPIONNAT : {competition}
 DATE : {date}
 
-Cherche sur le web : compos probables, absences, forme 5 derniers matchs, split domicile/exterieur, H2H, joueurs en forme.
-Sois honnete : si pas trouve, baisse la confiance. Termine par ce JSON UNIQUEMENT :
+Cherche sur le web et analyse en profondeur :
+- COMPOSITIONS probables des 2 equipes (titulaires, systeme de jeu, bloc haut ou bas)
+- ABSENCES (blesses, suspendus) et leur impact
+- FORME des 5 derniers matchs (scores, buteurs)
+- SPLIT domicile/exterieur
+- H2H complet (scores, buteurs recents)
+- STYLE DE JEU : equipe offensive/defensive, pressing, contre-attaques
+- JOUEUR CLÉ : identifie LE joueur le plus susceptible de marquer en croisant :
+  * sa forme recente (buts marqués)
+  * son historique contre cet adversaire
+  * les faiblesses défensives adverses (lents, mauvais dans les airs, couloirs faibles)
+  * son style (jeu de tete, vitesse, dribble) vs le profil du defenseur en face
+
+Termine IMPERATIVEMENT par ce JSON UNIQUEMENT :
 {{
   "over15": {{"probability": 0-100, "reason": "..."}},
   "over25": {{"probability": 0-100, "reason": "..."}},
