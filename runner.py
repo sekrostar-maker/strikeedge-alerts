@@ -74,7 +74,13 @@ def main():
                 log.info("    Appel Claude pour %s vs %s", home, away)
                 claude_result = analyze_nordic_match(match)
                 if claude_result and 'error' not in claude_result:
-                    alertes = engine._parse_claude_result(claude_result)
+                    alertes_raw = engine._parse_claude_result(claude_result)
+                    alertes = []
+                    for a in alertes_raw:
+                        adjusted = brain.adjust_probability(a['type'], a['probabilite'])
+                        if adjusted > 0:
+                            a['probabilite'] = adjusted
+                            alertes.append(a)
                     if alertes:
                         envoyer_alertes({'domicile':home,'exterieur':away,'heure':match.get('utcDate','?'),'championnat':competition_name}, alertes)
                         log.info("    ALERTE CLAUDE envoyee")
@@ -84,6 +90,14 @@ def main():
                 # Sinon -> Groq/Fallback
                 try:
                     alertes_sans = engine.analyse_match_sans_lineups(match)
+                    alertes_ajustees = []
+                    if alertes_sans:
+                        for a in alertes_sans:
+                            adjusted = brain.adjust_probability(a['type'], a['probabilite'])
+                            if adjusted > 0:
+                                a['probabilite'] = adjusted
+                                alertes_ajustees.append(a)
+                        alertes_sans = alertes_ajustees
                     if alertes_sans:
                         envoyer_alertes({'domicile':home,'exterieur':away,'heure':match.get('utcDate','?'),'championnat':competition_name}, alertes_sans)
                         log.info("    ALERTE envoyee")

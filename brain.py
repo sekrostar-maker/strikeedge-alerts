@@ -231,3 +231,18 @@ class Brain:
                 pass
         self.db.commit()
         return updated
+
+    def adjust_probability(self, prediction_type, prob):
+        """Ajuste la proba selon le taux de reussite historique"""
+        c = self.db.cursor()
+        c.execute("SELECT COUNT(*) as t, SUM(CASE WHEN result='GAGNE' THEN 1 ELSE 0 END) as g FROM predictions WHERE prediction_type=? AND result IS NOT NULL", (prediction_type,))
+        row = c.fetchone()
+        if row and row['t'] >= 5:
+            taux = (row['g'] or 0) / row['t'] * 100
+            if taux < 40:
+                return 0  # Ne plus proposer
+            elif taux < 55:
+                return max(60, prob - 10)  # Baisser
+            elif taux > 75:
+                return min(90, prob + 5)  # Augmenter
+        return prob  # Pas assez de données, garde la proba brute
