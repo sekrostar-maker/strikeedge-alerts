@@ -197,3 +197,37 @@ class Brain:
         c.execute('SELECT * FROM player_h2h WHERE joueur=? AND equipe_adverse=?', (joueur, equipe_adverse))
         row = c.fetchone()
         return dict(row) if row else None
+
+    def check_past_predictions(self):
+        """Vérifie les résultats des matchs prédits et met à jour GAGNE/PERDU"""
+        c = self.db.cursor()
+        c.execute("SELECT * FROM predictions WHERE result IS NULL")
+        pending = c.fetchall()
+        updated = 0
+        for p in pending:
+            # Chercher le résultat du match via l'API
+            try:
+                from football_api import FootballAPI
+                api = FootballAPI()
+                resp = api.session.get(f"{api.BASE_URL}/fixtures", params={"id": p['match_id_api']}, timeout=10)
+                if resp.status_code == 200:
+                    data = resp.json().get("response", [])
+                    if data:
+                        m = data[0]
+                        home_goals = m.get("goals", {}).get("home", 0) or 0
+                        away_goals = m.get("goals", {}).get("away", 0) or 0
+                        total = home_goals + away_goals
+                        pred_type = p['prediction_type']
+                        result = "PERDU"
+                        if "OVER 2.5" in pred_type and total > 2: result = "GAGNE"
+                        elif "OVER 1.5" in pred_type and total > 1: result = "GAGNE"
+                        elif "BTTS" in pred_type and home_goals > 0 and away_goals > 0: result = "GAGNE"
+                        elif "VICTOIRE" in pred_type:
+                            winner = "home" if home_goals > away_goals else "away" if away_goals > home_goals else "draw"
+                            if winner in pred_type.lower(): result = "GAGNE"
+                        c.execute("UPDATE predictions SET result=? WHERE id=?", (result, p['id']))
+                        updated += 1
+            except:
+                pass
+        self.db.commit()
+        return updated

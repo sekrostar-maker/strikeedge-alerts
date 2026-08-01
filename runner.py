@@ -96,6 +96,9 @@ def main():
         if cycle < 7:
             time.sleep(120)
     
+        updated = brain.check_past_predictions()
+    if updated > 0:
+        log.info("    Resultats verifies: %d predictions mises a jour", updated)
     log.info("=== Done ===")
 
 if __name__ == "__main__":
