@@ -55,11 +55,12 @@ def main():
             if not (-120 <= minutes <= 120):
                 continue
             
-            if mid in MATCHS_ANALYSES:
+            if mid in MATCHS_ANALYSES or mid in notified:
                 continue
             
             log.info("  %s vs %s (%.0f min)", home, away, minutes)
             MATCHS_ANALYSES.add(mid)
+            notified.add(mid)
             competition_name = api.get_competition_name(match)
             log.info('    Competition: %s, Nordique: %s', competition_name, competition_name in NORDIC_LEAGUES)
 
