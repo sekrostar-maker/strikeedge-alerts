@@ -53,8 +53,11 @@ def analyze_nordic_match(match):
         if data.get("error"): return {"error": str(data["error"])}
         text_blocks = [b["text"] for b in data.get("content", []) if b.get("type") == "text"]
         full_text = "\n".join(text_blocks).strip()
-        print(f"DEBUG Claude reponse: {full_text[:300]}")
-        json_match = re.search(r"\{[\s\S]*\}", full_text)
+        
+        # Chercher tous les objets JSON dans le texte
+        json_matches = list(re.finditer(r"\{[^{}]*\}", full_text))
+        # Prendre le dernier (le plus proche de la fin)
+        json_match = json_matches[-1] if json_matches else None
         candidate = json_match.group(0) if json_match else full_text
         candidate = candidate.replace("```json", "").replace("```", "").strip()
         return json.loads(candidate)
