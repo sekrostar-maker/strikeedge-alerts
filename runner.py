@@ -10,131 +10,54 @@ from alert_sender import envoyer_alertes
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s", datefmt="%Y-%m-%d %H:%M:%S", handlers=[logging.StreamHandler(sys.stdout)])
 log = logging.getLogger(__name__)
-
 NOTIFIED_FILE = Path(__file__).parent / "notified.json"
-MATCHS_ANALYSES = set()
-CLAUDE_CALLED = set()  # Évite de rappeler Claude pour le même match
-
-def load_notified():
-    if not NOTIFIED_FILE.exists(): return set()
-    try:
-        data = json.loads(NOTIFIED_FILE.read_text())
-        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-        return set(data.get("entries", {}).get(today, []))
-    except: return set()
-
-def save_notified(ids):
-    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    NOTIFIED_FILE.write_text(json.dumps({"entries": {today: sorted(ids)}}, indent=2))
+CLAUDE_DONE = set()
 
 def main():
     api = FootballAPI()
     engine = AnalysisEngine()
     brain = Brain()
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    notified = load_notified()
-    sent = 0
-
     log.info("=== Run started ===")
+    matches = api.get_fixtures(today)
+    log.info("%d matchs trouves", len(matches))
+    now = datetime.now(timezone.utc)
+
+    for match in matches:
+        home = match.get("homeTeam", {}).get("name", "?")
+        away = match.get("awayTeam", {}).get("name", "?")
+        mid = match["id"]
+        competition = api.get_competition_name(match)
+        
+        if competition not in NORDIC_LEAGUES or mid in CLAUDE_DONE:
+            continue
+        
+        try:
+            kickoff = datetime.fromisoformat(match["utcDate"].replace("Z", "+00:00"))
+            minutes = (kickoff - now).total_seconds() / 60
+        except:
+            continue
+        
+        if not (-15 <= minutes <= 120):
+            continue
+        
+        hs = api.get_team_stats(home, match.get('league_id',''))
+        if hs and hs.get('matchs', 0) < 5:
+            log.info("  %s vs %s: skipped (<5 matchs)", home, away)
+            continue
+        
+        log.info("  Appel Claude: %s vs %s (%.0f min)", home, away, minutes)
+        CLAUDE_DONE.add(mid)
+        result = analyze_nordic_match(match)
+        
+        if result and 'error' not in result:
+            alertes = engine._parse_claude_result(result)
+            if alertes:
+                envoyer_alertes({'domicile':home,'exterieur':away,'heure':match.get('utcDate','?'),'championnat':competition}, alertes)
+                log.info("    ALERTE CLAUDE envoyee")
+        else:
+            log.error("    Claude error: %s", str(result)[:200])
     
-    for cycle in range(8):
-        now = datetime.now(timezone.utc)
-        matches = api.get_fixtures(today)
-        log.info("Cycle %d: %d matchs", cycle+1, len(matches))
-
-        for match in matches:
-            mid = match["id"]
-            home = match.get("homeTeam", {}).get("name", "?")
-            away = match.get("awayTeam", {}).get("name", "?")
-            
-            try:
-                kickoff = datetime.fromisoformat(match["utcDate"].replace("Z", "+00:00"))
-                minutes = (kickoff - now).total_seconds() / 60
-            except:
-                continue
-            
-            if not (-120 <= minutes <= 120):
-                continue
-            
-            if mid in MATCHS_ANALYSES or mid in notified:
-                continue
-            
-            log.info("  %s vs %s (%.0f min)", home, away, minutes)
-            # Verifier que le championnat a au moins 5 matchs joues
-            hs = api.get_team_stats(home, match.get('league_id',''))
-            if hs and hs.get('matchs', 0) < 5:
-                log.info("    Skipped: moins de 5 matchs joues")
-                continue
-            MATCHS_ANALYSES.add(mid)
-            notified.add(mid)
-            competition_name = api.get_competition_name(match)
-            log.info('    Competition: %s, Nordique: %s', competition_name, competition_name in NORDIC_LEAGUES)
-
-            # Si championnat nordique -> Claude DIRECTEMENT
-            if competition_name in NORDIC_LEAGUES and mid not in CLAUDE_CALLED:
-                CLAUDE_CALLED.add(mid)
-                log.info("    Appel Claude pour %s vs %s", home, away)
-                claude_result = analyze_nordic_match(match)
-                if claude_result and 'error' not in claude_result:
-                    alertes_raw = engine._parse_claude_result(claude_result)
-                    alertes = []
-                    for a in alertes_raw:
-                        adjusted = brain.adjust_probability(a['type'], a['probabilite'])
-                        if adjusted > 0:
-                            a['probabilite'] = adjusted
-                            alertes.append(a)
-                    MATCHS_ANALYSES.add(mid)
-                    if alertes:
-                        envoyer_alertes({'domicile':home,'exterieur':away,'heure':match.get('utcDate','?'),'championnat':competition_name}, alertes)
-                        log.info("    ALERTE CLAUDE envoyee")
-                        # Ajouter les cotes
-                        odds = api.get_odds(mid)
-                        if odds:
-                            for a in alertes:
-                                if 'OVER 2.5' in a['type']:
-                                    cote = odds.get('totals', {}).get('Over 2.5')
-                                    if cote:
-                                        vb = engine.compare_odds(a['probabilite'], cote)
-                                        if vb: a['pourquoi'] += ' | ' + vb
-                                if 'OVER 1.5' in a['type']:
-                                    cote = odds.get('totals', {}).get('Over 1.5')
-                                    if cote:
-                                        vb = engine.compare_odds(a['probabilite'], cote)
-                                        if vb: a['pourquoi'] += ' | ' + vb
-                                if 'BTTS' in a['type']:
-                                    cote = odds.get('btts', {}).get('Yes')
-                                    if cote:
-                                        vb = engine.compare_odds(a['probabilite'], cote)
-                                        if vb: a['pourquoi'] += ' | ' + vb
-                else:
-                    log.error("    Claude error: %s", str(claude_result)[:200])
-            else:
-                # Sinon -> Groq/Fallback
-                try:
-                    alertes_sans = engine.analyse_match_sans_lineups(match)
-                    alertes_ajustees = []
-                    if alertes_sans:
-                        for a in alertes_sans:
-                            adjusted = brain.adjust_probability(a['type'], a['probabilite'])
-                            if adjusted > 0:
-                                a['probabilite'] = adjusted
-                                alertes_ajustees.append(a)
-                        alertes_sans = alertes_ajustees
-                    if alertes_sans:
-                        envoyer_alertes({'domicile':home,'exterieur':away,'heure':match.get('utcDate','?'),'championnat':competition_name}, alertes_sans)
-                        log.info("    ALERTE envoyee")
-                        for a in alertes_sans:
-                            brain.save_prediction(mid, f"{home} vs {away}", a['type'], a['probabilite'])
-                except Exception as e:
-                    log.error("    Erreur: %s", e)
-
-        save_notified(notified)
-        if cycle < 7:
-            time.sleep(120)
-    
-        updated = brain.check_past_predictions()
-    if updated > 0:
-        log.info("    Resultats verifies: %d predictions mises a jour", updated)
     log.info("=== Done ===")
 
 if __name__ == "__main__":
