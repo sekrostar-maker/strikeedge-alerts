@@ -13,6 +13,7 @@ log = logging.getLogger(__name__)
 
 NOTIFIED_FILE = Path(__file__).parent / "notified.json"
 MATCHS_ANALYSES = set()
+CLAUDE_CALLED = set()  # Évite de rappeler Claude pour le même match
 
 def load_notified():
     if not NOTIFIED_FILE.exists(): return set()
@@ -70,7 +71,8 @@ def main():
             log.info('    Competition: %s, Nordique: %s', competition_name, competition_name in NORDIC_LEAGUES)
 
             # Si championnat nordique -> Claude DIRECTEMENT
-            if competition_name in NORDIC_LEAGUES:
+            if competition_name in NORDIC_LEAGUES and mid not in CLAUDE_CALLED:
+                CLAUDE_CALLED.add(mid)
                 log.info("    Appel Claude pour %s vs %s", home, away)
                 claude_result = analyze_nordic_match(match)
                 if claude_result and 'error' not in claude_result:
