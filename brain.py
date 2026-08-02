@@ -198,7 +198,16 @@ class Brain:
         row = c.fetchone()
         return dict(row) if row else None
 
+    def _ensure_predictions_table(self):
+        c = self.db.cursor()
+        c.execute('''CREATE TABLE IF NOT EXISTS predictions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            date TEXT, match_id_api INTEGER, match_name TEXT,
+            prediction_type TEXT, probability REAL, result TEXT)''')
+        self.db.commit()
+
     def check_past_predictions(self):
+        self._ensure_predictions_table()
         """Vérifie les résultats des matchs prédits et met à jour GAGNE/PERDU"""
         c = self.db.cursor()
         c.execute("SELECT * FROM predictions WHERE result IS NULL")
