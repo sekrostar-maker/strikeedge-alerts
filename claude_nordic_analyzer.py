@@ -29,7 +29,7 @@ Cherche sur le web et analyse en profondeur :
   * les faiblesses défensives adverses (lents, mauvais dans les airs, couloirs faibles)
   * son style (jeu de tete, vitesse, dribble) vs le profil du defenseur en face
 
-REPONDS UNIQUEMENT AVEC CE JSON, SANS AUCUN AUTRE TEXTE AVANT OU APRES, PAS DE MARKDOWN :
+REPONDS UNIQUEMENT AVEC CE JSON EXACT, TOUS LES CHAMPS SONT OBLIGATOIRES, SANS AUCUN AUTRE TEXTE AVANT OU APRES, PAS DE MARKDOWN :
 {{
   "over15": {{"probability": 0-100, "reason": "..."}},
   "over25": {{"probability": 0-100, "reason": "..."}},
