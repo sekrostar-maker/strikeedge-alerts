@@ -81,6 +81,7 @@ def main():
                         if adjusted > 0:
                             a['probabilite'] = adjusted
                             alertes.append(a)
+                    MATCHS_ANALYSES.add(mid)
                     if alertes:
                         envoyer_alertes({'domicile':home,'exterieur':away,'heure':match.get('utcDate','?'),'championnat':competition_name}, alertes)
                         log.info("    ALERTE CLAUDE envoyee")
