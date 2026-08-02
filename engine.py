@@ -122,6 +122,17 @@ Reponds en JSON uniquement avec un champ "conseil" qui indique le pari le plus r
 
     def _parse_claude_result(self, data):
         alertes = []
+        # Format reduit (pick/probability/reason)
+        if 'pick' in data and 'over15' not in data:
+            prob = data.get('probability', 0)
+            if prob >= 60:
+                alertes.append({'type': 'VICTOIRE ' + data.get('pick','?'), 'probabilite': prob, 'pourquoi': data.get('reason','')})
+            if data.get('conseil'):
+                alertes.append({'type': 'CONSEIL', 'probabilite': 100, 'pourquoi': data['conseil']})
+            return alertes
+        
+        # Format complet (over15, over25, btts, victory)
+        alertes = []
         for key, label in [('over15','OVER 1.5'),('over25','OVER 2.5'),('btts','BTTS'),('victory','VICTOIRE')]:
             if key in data and isinstance(data[key], dict):
                 prob = data[key].get('probability', 0)
