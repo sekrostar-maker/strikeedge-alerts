@@ -70,7 +70,7 @@ def main():
             log.info('    Competition: %s, Nordique: %s', competition_name, competition_name in NORDIC_LEAGUES)
 
             # Si championnat nordique -> Claude DIRECTEMENT
-            if competition_name in NORDIC_LEAGUES:
+            if False and competition_name in NORDIC_LEAGUES:  # DESACTIVE
                 log.info("    Appel Claude pour %s vs %s", home, away)
                 claude_result = analyze_nordic_match(match)
                 if claude_result and 'error' not in claude_result:
